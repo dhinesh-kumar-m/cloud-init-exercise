@@ -9,7 +9,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
-        self.wfile.write(b"Hello from Testpress!")
+        if self.path == "/health":
+            self.wfile.write(b"ok")
+        else:
+            self.wfile.write(b"Hello from Testpress!")
 
     def log_message(self, format, *args):
         pass
