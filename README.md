@@ -10,4 +10,11 @@ and a small HTTP app — all through cloud-init, no manual SSH setup.
 3. `multipass info testpress-vm` to get the VM's IP
 4. `curl http://<ip>:8080` → `Hello from Testpress!`
 
+## Why systemd instead of `docker run --restart`
+
+I tried the plain `--restart unless-stopped` flag first, but `docker kill` doesn't
+actually trigger it — Docker treats that as a manual stop, not a crash, so it won't
+auto-restart. Switched to a systemd unit (`Restart=always`) instead. Also makes it
+start on boot and gives normal `systemctl status` / `journalctl -u testpress-app`.
+
 More to come (verification steps, how cloud-init works) as the setup gets fleshed out.

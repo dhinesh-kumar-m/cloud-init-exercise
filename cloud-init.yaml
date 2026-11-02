@@ -58,7 +58,25 @@ write_files:
       EXPOSE 8080
       CMD ["python", "app.py"]
 
+  - path: /etc/systemd/system/testpress-app.service
+    content: |
+      [Unit]
+      Description=Testpress HTTP app
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      RestartSec=3
+      ExecStartPre=-/usr/bin/docker rm -f testpress-app
+      ExecStart=/usr/bin/docker run --rm --name testpress-app --env-file /opt/testpress/app.env -p 8080:8080 testpress-app:latest
+      ExecStop=/usr/bin/docker stop -t 5 testpress-app
+
+      [Install]
+      WantedBy=multi-user.target
+
 runcmd:
   - chown -R testpress:testpress /opt/testpress
   - docker build -t testpress-app:latest /opt/testpress/app
-  - docker run -d --name testpress-app --restart unless-stopped --env-file /opt/testpress/app.env -p 8080:8080 testpress-app:latest
+  - systemctl daemon-reload
+  - systemctl enable --now testpress-app.service
