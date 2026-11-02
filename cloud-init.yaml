@@ -1,0 +1,64 @@
+#cloud-config
+package_update: true
+
+packages:
+  - docker.io
+  - git
+  - curl
+  - ffmpeg
+
+users:
+  - default
+  - name: testpress
+    groups: [docker]
+    shell: /bin/bash
+    lock_passwd: true
+
+write_files:
+  - path: /opt/testpress/app.env
+    owner: testpress:testpress
+    content: |
+      APP_ENV=production
+      APP_PORT=8080
+      # placeholder, not a real secret
+      APP_SECRET=changeme
+
+  - path: /opt/testpress/app/app.py
+    owner: testpress:testpress
+    content: |
+      from http.server import BaseHTTPRequestHandler, HTTPServer
+      import os
+
+      PORT = int(os.environ.get("APP_PORT", "8080"))
+
+
+      class Handler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              self.send_response(200)
+              self.send_header("Content-Type", "text/plain")
+              self.end_headers()
+              self.wfile.write(b"Hello from Testpress!")
+
+          def log_message(self, format, *args):
+              pass
+
+
+      if __name__ == "__main__":
+          server = HTTPServer(("0.0.0.0", PORT), Handler)
+          server.serve_forever()
+
+  - path: /opt/testpress/app/Dockerfile
+    owner: testpress:testpress
+    content: |
+      FROM python:3.12-alpine
+
+      WORKDIR /app
+      COPY app.py .
+
+      EXPOSE 8080
+      CMD ["python", "app.py"]
+
+runcmd:
+  - chown -R testpress:testpress /opt/testpress
+  - docker build -t testpress-app:latest /opt/testpress/app
+  - docker run -d --name testpress-app --restart unless-stopped --env-file /opt/testpress/app.env -p 8080:8080 testpress-app:latest
